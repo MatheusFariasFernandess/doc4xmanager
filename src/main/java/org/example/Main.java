@@ -1,40 +1,61 @@
 package org.example;
 
-import org.docx4j.TextUtils;
 import org.docx4j.dml.wordprocessingDrawing.Inline;
 import org.docx4j.model.table.TblFactory;
 import org.docx4j.openpackaging.packages.WordprocessingMLPackage;
 import org.docx4j.openpackaging.parts.WordprocessingML.BinaryPartAbstractImage;
 import org.docx4j.openpackaging.parts.WordprocessingML.MainDocumentPart;
 import org.docx4j.wml.*;
+import org.example.design.chain.ConnectDataBase;
+import org.example.design.chain.Hande;
+import org.example.design.chain.RightUserName;
+import org.example.design.chain.UserNameAndPasswordNotBlank;
 
-import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBElement;
-import javax.xml.bind.Marshaller;
-import java.io.File;
-import java.io.FileInputStream;
-import java.nio.file.Files;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
 public class Main {
     public static void main(String[] args) throws Exception {
-        File file = new File("teste.docx");
+//        Chain();
 
-        WordprocessingMLPackage wordprocessingMLPackage =
-                WordprocessingMLPackage.load(new FileInputStream(file.getPath()));
+    }
 
-        MainDocumentPart documentPart = wordprocessingMLPackage.getMainDocumentPart();
 
-        List<Object> allElementFromObject = getAllElementFromObject(wordprocessingMLPackage.getMainDocumentPart(), Text.class);
-        for (Object texto : allElementFromObject) {
-            Text text = (Text) texto;
-            if (text.getValue().equals("#MATHEUS")) {
-                text.setValue("SUBSTITUIDO");
+    public static void Chain() {
+        Hande chain = new UserNameAndPasswordNotBlank();
+        chain.setNext(new RightUserName())
+                .setNext(new ConnectDataBase());
+
+
+        // Teste com username errado
+        chain.handle("MATHEUS", "123");
+    }
+
+    public static void escreverDados() {
+        try (BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(new FileOutputStream("text.txt"))) {
+            bufferedOutputStream.write(new byte[]{65, 66, 67});
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    public static List<Object> getElement(Object obj, Class<?> classBind) {
+        List<Object> result = new ArrayList<>();
+        if (obj instanceof JAXBElement) {
+            obj = ((JAXBElement<?>) obj).getValue();
+        }
+
+        if (obj.getClass().equals(classBind)) {
+            result.add(obj);
+        } else if (obj instanceof ContentAccessor) {
+            List<?> childs = ((ContentAccessor) obj).getContent();
+            for (Object child : childs) {
+                result.addAll(getElement(child, classBind));
             }
         }
-        File file1 = new File("targe.docx");
-        wordprocessingMLPackage.save(file1);
+        return result;
     }
 
     public static List<Object> getAllElementFromObject(Object obj, Class<?> toSearch) {
@@ -47,7 +68,7 @@ public class Main {
             result.add(obj);
         } else if (obj instanceof ContentAccessor) {
             List<?> children = ((ContentAccessor) obj).getContent();
-            for(Object child : children) {
+            for (Object child : children) {
                 result.addAll(getAllElementFromObject(child, toSearch));
             }
         }
